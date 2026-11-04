@@ -52,14 +52,23 @@ answer is generated; out-of-scope turns get a fixed deflection line, never gener
   faster-whisper and Ollama integrations.
 - Alternative: LiveKit Agents (heavier setup: server plus SIP trunk for phones).
 
-## D6. Models (proposed, to be measured)
+## D6. Models: reuse the measured local voice stack (proposed)
 
-- Speech-to-text: faster-whisper `small` or `distil-large-v3` (not `large-v3`: phone-quality audio
-  and latency matter more than the last bit of accuracy). Already in the `langchain` conda env.
-- LLM: `qwen3.5:4b` or `gemma3:4b` via Ollama, both already pulled. Pick the one with fewer false
-  answers on the eval set.
-- Text-to-speech: Kokoro-82M ONNX, voice `af_heart`, on CPU so it doesn't compete for GPU memory.
-  Already used by Shivansh's clipboard reader (`F:\Voice\tts`).
+Shivansh's own offline voice setup (`F:\Voice`, README there) already benchmarked these on this
+machine. Reuse it rather than choose fresh:
+
+- Speech-to-text: candidates from his 11-model ASR benchmark. Parakeet V2 (his daily driver,
+  9.6x real time) or Whisper Turbo (60x real time, 26.4% WER on his technical-dictation test).
+  Whisper has a ready Pipecat integration (faster-whisper, already in the `langchain` env);
+  Parakeet would need a small custom Pipecat STT service. Start with Whisper, swap if the
+  caller-style eval says so.
+- LLM: `qwen3.5:4b` via Ollama (his cleanup model). **Must** send `reasoning_effort: "none"`
+  (or route through his `F:\Voice\proxy\ollama_nothink_proxy.py`): with thinking on it took
+  90-170 s per sentence; off, ~2 s. `gemma3:4b` as the comparison on the scope eval. His finding:
+  prompt bulk hurt gemma3:4b and helped qwen3.5, so measure, don't assume.
+- Text-to-speech: Kokoro-82M ONNX, voice `af_heart`, on CPU, with the sentence-chunked streaming
+  from `F:\Voice\tts\speak_clipboard.py`.
+- The README credits this prior work in a "Built on my existing local voice stack" section.
 
 ## D7. Repo location (decided, 4 Nov 2026)
 
