@@ -24,14 +24,15 @@
 ## Machine
 
 - RTX 5060 Laptop GPU, 8 GB. Ollama 0.32 with `qwen3.5:4b`, `gemma3:4b` (and others).
-- Conda envs: `langchain` has faster-whisper (CUDA), ollama, openai; base has kokoro_onnx.
-  Pipecat is not installed anywhere. **Never create venvs or pip-install without asking.**
+- Conda env for this project: `langchain` (D8). Has faster-whisper (CUDA), ollama, openai and
+  Pipecat 1.15.0. Base has kokoro_onnx. **Never create venvs or pip-install without asking.**
+- Prior voice work to reuse: `F:\Voice` (README: ASR benchmark, qwen3.5 no-think proxy, Kokoro
+  chunked streaming). Credited in this README.
 - Kokoro model files: `F:\Voice\tts\kokoro\`.
 
 ## Next, in order
 
-1. Shivansh: answer the env question (install Pipecat into `langchain`, or a new conda env) and
-   say yes/no to D3-D6.
+1. Shivansh: say yes/no to D3-D6 in `docs/DECISIONS.md`.
 2. Write `eval/questions.jsonl` and a text-only runner first (no audio). Pick the LLM and the
    one-call vs two-call scope check by the numbers.
 3. Wire the Pipecat pipeline with a browser call; measure latency.

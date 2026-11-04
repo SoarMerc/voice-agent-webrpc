@@ -75,7 +75,10 @@ machine. Reuse it rather than choose fresh:
 `F:\Products\sei-voice-agent`, its own git repo. Not `F:\TomatoSoup` (that is the published
 hint-ladder-eval project) and not the CV repo.
 
-## Open
+## D8. Python environment: the existing `langchain` conda env (decided, 4 Nov 2026)
 
-- Python environment: install Pipecat into the existing `langchain` env, or a new conda env for
-  this project. Waiting on Shivansh.
+Pipecat 1.15.0 installed there with extras `webrtc,silero,whisper,ollama,runner`. torch (CUDA),
+numpy and faster-whisper were untouched. Known side effect: OpenTelemetry packages moved to
+1.45.2, so the env's existing `opentelemetry-exporter-otlp-proto-grpc` 1.39.0 now has a version
+mismatch (only matters if something in the env exports traces over gRPC). Kokoro (`kokoro-onnx`)
+is in the base env, not yet in `langchain`.
