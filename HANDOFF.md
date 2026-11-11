@@ -1,15 +1,16 @@
-# Handoff (4 Nov 2026)
+# Handoff (11 Nov 2026)
 
 ## Where things stand
 
 - Take-home for Sei AI: a voice support agent for Wise's "Where is my money?" FAQ that deflects
   anything else. Brief, scope policy, architecture and eval plan: `docs/SPEC.md`.
-- Decided: run fully local on open-source models (D1); browser call instead of a phone number,
-  divergence stated in the README (D2); this repo location (D7). Proposed, need his yes: no RAG
-  (D3), explicit scope check (D4), Pipecat (D5), models (D6). All in `docs/DECISIONS.md`.
-- Knowledge base: `kb/wise-where-is-my-money.md`, the six articles fetched 3 Nov 2026 through a
-  model-processed renderer. Check wording against the live pages before the final run.
-- No code yet. Nothing installed yet.
+- Decisions D1-D14 in `docs/DECISIONS.md`. All decided except D10 (end of turn: Smart Turn v3 vs
+  silence timeout, needs a recorded test). D4's classifier (LLM first-line label, small
+  embedding classifier, or a cascade) is picked by the eval.
+- Knowledge base: `kb/wise-where-is-my-money.md`, verbatim from the live pages (pasted by
+  Shivansh, 11 Nov 2026).
+- System prompt with spoken-style rules and class labels: `agent/system_prompt.md` (D14).
+- No pipeline code yet.
 
 ## Context
 
@@ -24,20 +25,21 @@
 ## Machine
 
 - RTX 5060 Laptop GPU, 8 GB. Ollama 0.32 with `qwen3.5:4b`, `gemma3:4b` (and others).
-- Conda env for this project: `langchain` (D8). Has faster-whisper (CUDA), ollama, openai and
-  Pipecat 1.15.0. Base has kokoro_onnx. **Never create venvs or pip-install without asking.**
+- Conda env `langchain` (D8): faster-whisper (CUDA), ollama, openai, Pipecat 1.15.0 (Smart Turn
+  v3 included), sentence-transformers, scikit-learn, kokoro-onnx 0.6.1. Call its python directly:
+  `C:\Users\Shivansh\miniconda3\envs\langchain\python.exe` (`conda run` crashes here).
+  **Never create venvs or pip-install without asking.**
 - Prior voice work to reuse: `F:\Voice` (README: ASR benchmark, qwen3.5 no-think proxy, Kokoro
-  chunked streaming). Credited in this README.
-- Kokoro model files: `F:\Voice\tts\kokoro\`.
+  chunked streaming). Credited in this README. Kokoro model files: `F:\Voice\tts\kokoro\`.
 
 ## Next, in order
 
-1. Shivansh: say yes/no to D3-D6 in `docs/DECISIONS.md`.
-2. Write `eval/questions.jsonl` and a text-only runner first (no audio). Pick the LLM and the
-   one-call vs two-call scope check by the numbers.
-3. Wire the Pipecat pipeline with a browser call; measure latency.
+1. `eval/questions.jsonl` (held-out test set) and `eval/train.jsonl` (classifier training,
+   no shared sentences), then a text-only runner. Compare the D4 classifier options.
+2. Wire the Pipecat pipeline with a browser call; run the D10 end-of-turn test; measure latency.
+3. Faithfulness review (D13): Claude labels, Shivansh reviews the unsure ones and a sample.
 4. README with results; record the demo video.
-5. Optional: Twilio adapter.
+5. Optional, not yet: Twilio adapter.
 
 ## Rules
 

@@ -17,8 +17,8 @@ He said he is judging **clarity of thinking** and assumes AI was used.
 
 1. A caller starts a voice call, asks questions in natural speech, and hears short spoken answers
    grounded only in the six FAQ articles (`kb/wise-where-is-my-money.md`).
-2. Any question outside that scope gets one deflection line ("Let me connect you to a colleague who
-   can help with that"), then the call ends.
+2. Any question outside that scope gets a fixed handoff line that names the topic, one chance to ask
+   something else about their transfer, then the call ends (see "Handoff behaviour").
 3. The caller can interrupt the agent mid-sentence (barge-in).
 4. A test set with measured results: answer-vs-deflect accuracy, and answer faithfulness.
 5. A README a reviewer can read in five minutes: what it does, how to run it, the decisions, the
@@ -40,18 +40,35 @@ Each caller turn falls into one of four classes:
 | Class | Example | Behaviour |
 |---|---|---|
 | **In scope** | "My recipient says the money hasn't arrived but the app says complete." | Answer from the FAQ, two or three spoken sentences, then "Anything else about your transfer?" |
-| **In scope, needs the account** | "Where's my transfer 4471? It was due Monday." | The agent can't see accounts. Give the general answer (tracker, working days, receipt), then deflect for the specific transfer. |
-| **Out of scope** | Fees, exchange rates, cancelling, card problems, opening an account, anything not about where money is. | Deflect and end the call. |
-| **Small talk / unclear** | "Hello?", "Sorry, what?", silence. | Greet or ask them to repeat; never deflect on the first unclear turn. Deflect after two unclear turns in a row. |
+| **In scope, needs the account** | "Where's my transfer 4471? It was due Monday." | The agent can't see accounts. Give the general answer (tracker, working days, receipt), then a soft handoff for the specific transfer. |
+| **Out of scope** | Fees, exchange rates, cancelling, card problems, opening an account, anything not about where money is. | Soft handoff (below). |
+| **Small talk / unclear** | "Hello?", "Sorry, what?", garbled transcript. | 1st: greet or ask them to repeat. 2nd in a row: say what the agent can help with ("when your money will arrive, what a proof of payment is…"). 3rd in a row: hand off. Silence and empty transcripts are not turns and don't count. |
+
+### Handoff behaviour
+
+The scope check is strict about topic but forgiving about the turn: a misclassification costs the
+caller one extra sentence, not the call. The brief allows cutting the call after a deflection; it
+doesn't require doing so on the first wrong guess.
+
+- **Soft handoff** (out of scope, needs-account): a fixed line that names the topic, e.g. "I can't
+  help with fees here, but a colleague can. Anything else about where your money is before I
+  connect you?" An in-scope reply gets answered and the call continues; anything else ends the
+  call with "Connecting you now."
+- **Immediate handoff**, no second chance: requests to act (cancel, refund, change details),
+  distress or fraud claims, prompt injection. Being harsh here is correct.
+- Handoff lines are fixed text, never generated.
+- In production "end the call" means "transfer to the human queue"; in the demo it hangs up.
 
 Edge cases to decide explicitly (and test):
 - Topics the articles only link out to (cancelling a completed transfer, wrong bank details, Interest
   or Stocks thresholds): **deflect**; the agent says only what the six articles say.
 - Mixed question ("When will it arrive, and what are your fees?"): answer the in-scope part, then
-  deflect for the rest.
-- Requests to act (cancel, refund, change details): deflect; the agent never takes actions.
-- Prompt injection / "ignore your instructions": treat as out of scope.
-- Distress or fraud claims ("I think I've been scammed"): deflect immediately.
+  soft handoff for the rest.
+- Requests to act (cancel, refund, change details): immediate handoff; the agent never takes actions.
+- Prompt injection / "ignore your instructions": immediate handoff.
+- Distress or fraud claims ("I think I've been scammed"): immediate handoff.
+- Follow-ups that only make sense with context ("and on a Friday?"): the scope check sees the
+  previous turn, not just the current utterance.
 
 ## Architecture
 
