@@ -27,6 +27,9 @@ from pipecat.runner.utils import create_transport
 from pipecat.services.kokoro.tts import KokoroTTSService
 from pipecat.services.whisper.stt import Model, WhisperSTTService
 from pipecat.transports.base_transport import TransportParams
+from pipecat.turns.user_mute.mute_until_first_bot_complete_user_mute_strategy import (
+    MuteUntilFirstBotCompleteUserMuteStrategy,
+)
 
 from agent.llm import WiseScopeLLM
 from agent.policy import GREETING
@@ -62,7 +65,12 @@ async def bot(runner_args: RunnerArguments):
         context,
         # Silero for speech/silence; Pipecat's default turn strategy (Smart Turn v3) decides
         # when the caller has finished (D10).
-        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+        # The caller is muted until the greeting finishes, so the agent can't hear its own
+        # greeting through the caller's speakers and answer it.
+        user_params=LLMUserAggregatorParams(
+            vad_analyzer=SileroVADAnalyzer(),
+            user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
+        ),
     )
 
     pipeline = Pipeline([
@@ -83,17 +91,24 @@ async def bot(runner_args: RunnerArguments):
         idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
     )
 
-    @latency.event_handler("on_latency_measured")
-    async def on_latency(_observer, seconds):
-        logger.info(f"latency end-of-speech -> first audio: {seconds:.2f}s")
-        LATENCY_LOG.parent.mkdir(exist_ok=True)
-        with LATENCY_LOG.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"t": time.strftime("%Y-%m-%d %H:%M:%S"), "latency_s": round(seconds, 3)}) + "\n")
-
     @latency.event_handler("on_latency_breakdown")
     async def on_breakdown(_observer, breakdown):
-        for line in breakdown.turn_contribution_lines():
+        lines = breakdown.turn_contribution_lines()
+        for line in lines:
             logger.info(line)
+        total = next((l for l in lines if "TOTAL" in l), "")
+        # "TOTAL (from client connected)" turns are timed from the connection, not from the end
+        # of the caller's speech (no VAD stop was seen); they are not response latency.
+        if not total or "from client connected" in total:
+            return
+        seconds = float(total.split("s", 1)[0])
+        parts = {
+            l.split("s", 1)[1].split("[")[0].strip(): float(l.split("s", 1)[0])
+            for l in lines if "TOTAL" not in l and l.strip()
+        }
+        LATENCY_LOG.parent.mkdir(exist_ok=True)
+        with LATENCY_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.strftime("%Y-%m-%d %H:%M:%S"), "latency_s": seconds, "parts": parts}) + "\n")
 
     @transport.event_handler("on_client_connected")
     async def on_connected(_transport, _client):

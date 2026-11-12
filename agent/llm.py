@@ -50,6 +50,9 @@ class WiseScopeLLM(OLLamaLLMService):
         user_text = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         previous_agent = next((m["content"] for m in reversed(messages) if m["role"] == "assistant"), "")
         started = time.perf_counter()
+        if not user_text.strip():
+            logger.info("turn skipped: empty transcript (not counted as unclear)")
+            return
 
         label = self._guard.escalation(user_text, previous_agent)
         source = "classifier"
@@ -103,5 +106,5 @@ class WiseScopeLLM(OLLamaLLMService):
             if hasattr(stream, "aclose"):
                 await stream.aclose()
         if label is None:                                  # reply ended inside the label line
-            label, _ = split_label(buffer + "\n")
+            label, _ = split_label(buffer, final=True)
         return label or "UNCLEAR", spoken

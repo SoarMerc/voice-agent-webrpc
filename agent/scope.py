@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LABEL_RE = re.compile(r"\s*[`*]*([A-Za-z_]+)[`*]*\s*(?::|\n|$)")
+LABEL_RE = re.compile(r"\s*[`*]*([A-Za-z_]+)[`*]*[ \t]*(?::|\n)")
 
 
 def system_prompt() -> str:
@@ -14,9 +14,13 @@ def system_prompt() -> str:
     return template.replace("{faq}", faq)
 
 
-def split_label(text: str):
-    """Return (LABEL, rest) once the label line is complete, else (None, None)."""
-    match = LABEL_RE.match(text)
+def split_label(text: str, final: bool = False):
+    """Return (LABEL, rest) once the label line is complete, else (None, None).
+
+    Mid-stream the label counts only after its newline or colon ("ANS" is not "ANSWER" yet).
+    With final=True the whole reply has arrived, so a bare "OUT" counts too.
+    """
+    match = LABEL_RE.match(text + "\n" if final else text)
     if not match:
         return None, None
     return match.group(1).upper(), text[match.end():]

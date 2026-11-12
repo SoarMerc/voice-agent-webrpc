@@ -89,6 +89,11 @@ only on a separate 66-line dev set.
 2. Live-call latency, median and p90 over real calls (logged to `eval/results/call-latency.jsonl`),
    and the Smart Turn vs silence-timeout test (D10).
 3. Phone number: a Twilio Media Streams transport in Pipecat; the pipeline doesn't change.
+- First live calls (3 measured turns): 2.3-2.4 s from the end of the caller's speech to the first
+  audio. Per turn: scope label + LLM first text 0.6-0.9 s, Kokoro's first sentence 0.8-1.4 s
+  (CPU, the largest part). They also exposed three bugs, now fixed: a half-streamed label ("ANS")
+  read as unknown, empty transcripts counted as unclear turns, and the agent transcribing its own
+  greeting through the caller's speakers.
 - Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
   prompt), `qwen3.5:9b` 79% with 9 replies missing the label, and didn't fit fully in GPU memory.
 - Ollama's OpenAI-compatible endpoint took 2.6 s to the first token; its native API with

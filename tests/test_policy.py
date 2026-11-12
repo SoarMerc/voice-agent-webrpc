@@ -75,5 +75,5 @@ def test_unknown_label_is_never_spoken():
 def test_split_label():
     assert split_label("ANSWER\nYou can") == ("ANSWER", "You can")
     assert split_label("partial: First") == ("PARTIAL", " First")
-    assert split_label("ANSW") == ("ANSW", "")  # caller must check the label is known
-    assert split_label("OUT") == ("OUT", "")
+    assert split_label("ANS") == (None, None)            # mid-stream: label not finished yet
+    assert split_label("OUT", final=True) == ("OUT", "")  # whole reply was just the label
