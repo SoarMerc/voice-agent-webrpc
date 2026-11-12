@@ -60,8 +60,11 @@ doesn't require doing so on the first wrong guess.
 - In production "end the call" means "transfer to the human queue"; in the demo it hangs up.
 
 Edge cases to decide explicitly (and test):
-- Topics the articles only link out to (cancelling a completed transfer, wrong bank details, Interest
-  or Stocks thresholds): **deflect**; the agent says only what the six articles say.
+- Topics the articles only link out to (cancelling a completed transfer, Interest or Stocks
+  thresholds): **deflect**; the agent says only what the six articles say.
+- Wrong bank details: **answer**. The articles say what can happen (slower, or returned) and what
+  to do (check the activity list; if the money is coming back, fix the details or cancel). Only
+  the detailed steps are linked out.
 - Mixed question ("When will it arrive, and what are your fees?"): answer the in-scope part, then
   soft handoff for the rest.
 - Requests to act (cancel, refund, change details): immediate handoff; the agent never takes actions.

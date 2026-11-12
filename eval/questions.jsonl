@@ -37,7 +37,7 @@
 {"id": "q37", "kind": "out", "text": "My Wise card got declined at a shop.", "class": "out"}
 {"id": "q38", "kind": "out", "text": "How do I open a business account?", "class": "out"}
 {"id": "q39", "kind": "out", "text": "How do I cancel a transfer?", "class": "out", "note": "how-to only linked from the KB; asking how, not asking us to do it"}
-{"id": "q40", "kind": "out", "text": "What should I do if I entered the wrong bank details?", "class": "out", "note": "the KB links out to this; it only says it may be slower or returned"}
+{"id": "q40", "kind": "boundary", "text": "What should I do if I entered the wrong bank details?", "class": "in", "article": "delay", "note": "relabelled out -> in on 12 Nov 2026: the delay article says check the activity list and, if the money is coming back, fix the details or cancel"}
 {"id": "q41", "kind": "out", "text": "What's the daily limit for sending from my Interest balance?", "class": "out"}
 {"id": "q42", "kind": "out", "text": "Can I receive money into my Wise account in Japanese yen?", "class": "out"}
 {"id": "q43", "kind": "out", "text": "Is Wise regulated in the UK?", "class": "out"}

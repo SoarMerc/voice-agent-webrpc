@@ -53,15 +53,16 @@ separate 66-line dev set.
 | Scope check | Accuracy | False answers | False handoffs |
 |---|---|---|---|
 | LLM label, first prompt | 67% | 4 | 0 |
-| LLM label, tuned prompt | 82% | 1 | 4 |
-| Embedding classifier alone | 80% | 6 | 0 |
-| LLM + classifier escalating to urgent/unclear | **83%** | 1 | 4 |
+| LLM label, tuned prompt | 83% | 0 | 4 |
+| Embedding classifier alone | 82% | 5 | 0 |
+| LLM + classifier escalating to urgent/unclear (chosen) | **85%** | 0 | 4 |
 
-- False answer: spoke FAQ content when it should have handed off (the costly error). The one left
-  is a disputed label (q40).
+- False answer: spoke FAQ content when it should have handed off (the costly error).
+- One test label was corrected after the run (q40, wrong bank details: out → in, because the delay
+  article covers it). Before the fix: 82% / 80% / 83%, with one false answer.
 - Class label known 0.46 s median (0.48 s p90) after the caller's text arrives; LLM only.
-- Faithfulness (`eval/faithfulness.md`): 22 of 31 spoken answers fully supported by the FAQ,
-  3 unsure, **6 unsupported**, mostly invented timings and guesses about a caller's own transfer.
+- Faithfulness (`eval/faithfulness.md`): 23 of 31 spoken answers fully supported by the FAQ,
+  **8 unsupported**, mostly invented timings and guesses about a caller's own transfer.
   This is the open problem.
 - Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
   prompt), `qwen3.5:9b` 79% with 9 replies missing the label, and didn't fit fully in GPU memory.

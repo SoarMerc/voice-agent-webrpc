@@ -60,8 +60,8 @@ answer is generated; out-of-scope turns get a fixed deflection line, never gener
     resistance and a tunable threshold.
   - `sentence-transformers` and `scikit-learn` are already in the `langchain` env; SetFit is not.
 - Result (12 Nov 2026, held-out set; README "Results"): LLM label 82%, classifier 80%,
-  confidence cascade 83-85%. **Proposed: the LLM label, with the classifier only allowed to
-  escalate to urgent or unclear** (83%). The classifier is reliable on those two classes and
+  confidence cascade 83-85%. **Decided (12 Nov 2026): the LLM label, with the classifier only
+  allowed to escalate to urgent or unclear** (83%). The classifier is reliable on those two classes and
   unreliable on "in scope" (it called fees and weather in scope), so it may only make the agent
   more cautious, never make it answer. Simple to explain, and false answers stay bounded by the
   LLM.
