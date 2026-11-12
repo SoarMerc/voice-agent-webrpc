@@ -1,19 +1,25 @@
 """Text-only scope eval (no audio).
 
-Runs every line of eval/questions.jsonl through three scope checks (DECISIONS.md D4):
+Runs caller lines through three scope checks (DECISIONS.md D4):
   llm      - the answer model writes the class label on its first line (agent/system_prompt.md)
   clf      - sentence embeddings + logistic regression, trained on eval/train.jsonl only
-  cascade  - clf when its confidence >= threshold, otherwise the llm label
+  combined - "two guards": the LLM label, overridden by the classifier when the classifier says
+             urgent or unclear (the two classes the LLM misses), plus the older confidence cascade
+
+Splits:
+  --split test   eval/questions.jsonl, the held-out set. Run once per prompt version, not to tune.
+  --split train  eval/train.jsonl, the dev set for tuning the prompt. LLM only (the classifier is
+                 trained on it, so its score there means nothing).
 
 Usage:
-  python eval/run_scope.py [--model qwen3.5:4b] [--embed BAAI/bge-base-en-v1.5]
+  python eval/run_scope.py [--split test|train] [--model qwen3.5:4b] [--embed BAAI/bge-base-en-v1.5]
 
-Writes eval/results/<model>-<timestamp>.json (every prediction, LLM reply and timing) and prints
-a summary.
+Writes eval/results/<split>-<model>-<timestamp>.json and prints a summary.
 """
 
 import argparse
 import json
+import re
 import statistics
 import time
 from collections import Counter
@@ -29,6 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CLASSES = ["in", "in_handoff", "out", "urgent", "unclear"]
 ANSWERS = {"in", "in_handoff"}    # classes where the agent speaks FAQ content
 HANDOFFS = {"out", "urgent"}      # classes where it only plays a fixed line
+GUARD_CLASSES = {"urgent", "unclear"}
 
 
 def load_jsonl(path):
@@ -41,9 +48,15 @@ def system_prompt():
     return template.replace("{faq}", faq)
 
 
+# Prompt labels (distinct words a small model won't blur) -> eval classes.
+PROMPT_LABELS = {"answer": "in", "partial": "in_handoff", "out": "out", "urgent": "urgent", "unclear": "unclear"}
+
+
 def parse_label(reply):
-    first = reply.strip().splitlines()[0].strip().strip("`*:. ").lower() if reply.strip() else ""
-    return first if first in CLASSES else f"invalid:{first[:20]}"
+    """The label is the first word of the reply; it may be followed by a newline or by ': text'."""
+    match = re.match(r"\s*[`*]*([a-z_]+)", reply.lower())
+    word = match.group(1) if match else ""
+    return PROMPT_LABELS.get(word, f"invalid:{reply.strip()[:20]}")
 
 
 def run_llm(client, model, prompt, item):
@@ -56,7 +69,7 @@ def run_llm(client, model, prompt, item):
     first_token = label_at = None
     reply = ""
     # Native Ollama API with think=False. Through the OpenAI-compatible endpoint with
-    # reasoning_effort "none" the first content token took ~2.6 s; natively ~0.5 s.
+    # reasoning_effort "none" the first content token took ~2.6 s; natively ~0.6 s.
     stream = client.chat(
         model=model,
         messages=messages,
@@ -71,7 +84,7 @@ def run_llm(client, model, prompt, item):
         if first_token is None:
             first_token = time.perf_counter() - start
         reply += delta
-        if label_at is None and "\n" in reply:
+        if label_at is None and re.search(r"[\n:]", reply):
             label_at = time.perf_counter() - start
     total = time.perf_counter() - start
     return {
@@ -91,78 +104,85 @@ def clf_text(item):
 
 
 def metrics(gold, pred):
-    n = len(gold)
     pairs = list(zip(gold, pred))
     return {
-        "accuracy": round(sum(g == p for g, p in pairs) / n, 3),
+        "accuracy": round(sum(g == p for g, p in pairs) / len(pairs), 3),
         # answered (spoke FAQ content) when it should have handed off: the costly error
         "false_answer": sum(g in HANDOFFS and p in ANSWERS for g, p in pairs),
         # handed off when it could have answered
         "false_handoff": sum(g in ANSWERS and p in HANDOFFS for g, p in pairs),
         # urgent treated as an ordinary out-of-scope (soft handoff instead of immediate)
         "urgent_softened": sum(g == "urgent" and p == "out" for g, p in pairs),
+        # needs-account / mixed answered without the handoff
+        "handoff_dropped": sum(g == "in_handoff" and p == "in" for g, p in pairs),
         "invalid_label": sum(p.startswith("invalid") for p in pred),
-        "n": n,
+        "n": len(pairs),
     }
 
 
 def confusion(gold, pred):
-    labels = CLASSES + sorted({p for p in pred if p not in CLASSES})
-    counts = Counter(zip(gold, pred))
-    width = max(len(l) for l in labels) + 2
-    lines = ["gold \\ pred".ljust(width) + "".join(l[:10].rjust(11) for l in labels)]
+    labels = CLASSES + (["invalid"] if any(p.startswith("invalid") for p in pred) else [])
+    counts = Counter((g, "invalid" if p.startswith("invalid") else p) for g, p in zip(gold, pred))
+    lines = ["gold \\ pred".ljust(12) + "".join(l.rjust(11) for l in labels)]
     for g in CLASSES:
-        lines.append(g.ljust(width) + "".join(str(counts[(g, p)]).rjust(11) for p in labels))
+        lines.append(g.ljust(12) + "".join(str(counts[(g, p)]).rjust(11) for p in labels))
     return "\n".join(lines)
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--split", choices=["test", "train"], default="test")
     parser.add_argument("--model", default="qwen3.5:4b")
     parser.add_argument("--embed", default="BAAI/bge-base-en-v1.5")
     parser.add_argument("--host", default="http://localhost:11434")
     args = parser.parse_args()
 
-    questions = load_jsonl(ROOT / "eval" / "questions.jsonl")
     train = load_jsonl(ROOT / "eval" / "train.jsonl")
-    gold = [q["class"] for q in questions]
+    items = load_jsonl(ROOT / "eval" / "questions.jsonl") if args.split == "test" else train
+    for i, item in enumerate(items):
+        item.setdefault("id", f"t{i + 1:02d}")
+    gold = [q["class"] for q in items]
 
-    # Small classifier, trained only on train.jsonl (D12).
-    encoder = SentenceTransformer(args.embed)
-    x_train = encoder.encode([t["text"] for t in train], normalize_embeddings=True)
-    clf = LogisticRegression(max_iter=2000, C=4.0).fit(x_train, [t["class"] for t in train])
-    t0 = time.perf_counter()
-    x_eval = encoder.encode([clf_text(q) for q in questions], normalize_embeddings=True)
-    clf_ms = (time.perf_counter() - t0) / len(questions) * 1000
-    proba = clf.predict_proba(x_eval)
-    clf_pred = [clf.classes_[i] for i in proba.argmax(axis=1)]
-    clf_conf = proba.max(axis=1)
+    clf_pred = clf_conf = None
+    clf_ms = None
+    if args.split == "test":
+        encoder = SentenceTransformer(args.embed)
+        x_train = encoder.encode([t["text"] for t in train], normalize_embeddings=True)
+        clf = LogisticRegression(max_iter=2000, C=4.0).fit(x_train, [t["class"] for t in train])
+        t0 = time.perf_counter()
+        x_eval = encoder.encode([clf_text(q) for q in items], normalize_embeddings=True)
+        clf_ms = round((time.perf_counter() - t0) / len(items) * 1000, 1)
+        proba = clf.predict_proba(x_eval)
+        clf_pred = [clf.classes_[i] for i in proba.argmax(axis=1)]
+        clf_conf = proba.max(axis=1)
 
-    # LLM first-line label.
     client = ollama.Client(host=args.host)
     prompt = system_prompt()
     run_llm(client, args.model, prompt, {"text": "hello"})  # warm up: load model, cache the prompt
     llm_runs = []
-    for q in questions:
+    for i, q in enumerate(items):
         r = run_llm(client, args.model, prompt, q)
         llm_runs.append(r)
         mark = "ok " if r["label"] == q["class"] else "XX "
-        print(f"{mark}{q['id']} gold={q['class']:<10} llm={r['label']:<10} clf={clf_pred[len(llm_runs)-1]:<10} {r['label_s']:.2f}s")
+        clf_note = f" clf={clf_pred[i]}" if clf_pred else ""
+        print(f"{mark}{q['id']} gold={q['class']:<10} llm={r['label']:<10}{clf_note}  {r['label_s']:.2f}s  | {q['text'][:50]}")
     llm_pred = [r["label"] for r in llm_runs]
 
-    results = {"llm": metrics(gold, llm_pred), "clf": metrics(gold, clf_pred)}
-    for threshold in (0.5, 0.6, 0.7, 0.8):
-        cascade = [c if conf >= threshold else l for c, conf, l in zip(clf_pred, clf_conf, llm_pred)]
-        m = metrics(gold, cascade)
-        m["clf_share"] = round(float(np.mean(clf_conf >= threshold)), 2)
-        results[f"cascade@{threshold}"] = m
+    results = {"llm": metrics(gold, llm_pred)}
+    if clf_pred:
+        results["clf"] = metrics(gold, clf_pred)
+        guarded = [c if c in GUARD_CLASSES else l for c, l in zip(clf_pred, llm_pred)]
+        results["guard"] = metrics(gold, guarded)
+        for threshold in (0.5, 0.7):
+            cascade = [c if conf >= threshold else l for c, conf, l in zip(clf_pred, clf_conf, llm_pred)]
+            results[f"cascade@{threshold}"] = metrics(gold, cascade)
 
     label_times = [r["label_s"] for r in llm_runs]
     timing = {
         "llm_label_median_s": round(statistics.median(label_times), 3),
         "llm_label_p90_s": round(float(np.percentile(label_times, 90)), 3),
         "llm_first_token_median_s": round(statistics.median(r["first_token_s"] for r in llm_runs), 3),
-        "clf_ms_per_item": round(clf_ms, 1),
+        "clf_ms_per_item": clf_ms,
     }
 
     print("\n== scope metrics ==")
@@ -170,17 +190,19 @@ def main():
         print(f"{name:<14} {m}")
     print("\n== timing ==", timing)
     print("\n== llm confusion ==\n" + confusion(gold, llm_pred))
-    print("\n== clf confusion ==\n" + confusion(gold, clf_pred))
+    if clf_pred:
+        print("\n== guard confusion ==\n" + confusion(gold, guarded))
 
     out_dir = ROOT / "eval" / "results"
     out_dir.mkdir(exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
-    out = out_dir / f"{args.model.replace(':', '_').replace('/', '_')}-{stamp}.json"
+    out = out_dir / f"{args.split}-{args.model.replace(':', '_').replace('/', '_')}-{stamp}.json"
     out.write_text(json.dumps({
-        "model": args.model, "embed": args.embed, "metrics": results, "timing": timing,
+        "split": args.split, "model": args.model, "embed": args.embed if clf_pred else None,
+        "metrics": results, "timing": timing,
         "items": [
-            {**q, "llm": r, "clf": c, "clf_conf": round(float(conf), 3)}
-            for q, r, c, conf in zip(questions, llm_runs, clf_pred, clf_conf)
+            {**q, "llm": r, **({"clf": clf_pred[i], "clf_conf": round(float(clf_conf[i]), 3)} if clf_pred else {})}
+            for i, (q, r) in enumerate(zip(items, llm_runs))
         ],
     }, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"\nwrote {out.relative_to(ROOT)}")
