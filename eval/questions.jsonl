@@ -57,4 +57,6 @@
 {"id": "q57", "kind": "unclear", "text": "can you hear me", "class": "unclear"}
 {"id": "q58", "kind": "unclear", "text": "the the uh banana number", "class": "unclear"}
 {"id": "q59", "kind": "boundary", "text": "My transfer got sent back to me, when do I get the refund?", "class": "in", "article": "delay", "note": "KB: refunds can take a few days depending on currency and payment method"}
-{"id": "q60", "kind": "boundary", "text": "Why did you ask for my ID before sending my money?", "class": "in", "article": "delay", "note": "security checks; the ID process itself is linked out"}
+{"id": "q61", "kind": "done", "context": [{"role": "user", "text": "What's a proof of payment?"}, {"role": "agent", "text": "It's a document showing you sent money from your bank account, like a bank statement PDF. Anything else about your transfer?"}], "text": "no that's it thanks", "class": "done", "note": "added 12 Nov 2026 with the DONE label"}
+{"id": "q62", "kind": "done", "context": [{"role": "user", "text": "When will my money arrive?"}, {"role": "agent", "text": "You'll see an estimate in the tracker in your Wise account. Anything else about your transfer?"}], "text": "nah all good, bye", "class": "done", "note": "added 12 Nov 2026 with the DONE label"}
+{"id": "q60","kind": "boundary", "text": "Why did you ask for my ID before sending my money?", "class": "in", "article": "delay", "note": "security checks; the ID process itself is linked out"}

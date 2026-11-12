@@ -32,7 +32,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
 
 ROOT = Path(__file__).resolve().parent.parent
-CLASSES = ["in", "in_handoff", "out", "urgent", "unclear"]
+CLASSES = ["in", "in_handoff", "out", "urgent", "unclear", "done"]
 ANSWERS = {"in", "in_handoff"}    # classes where the agent speaks FAQ content
 HANDOFFS = {"out", "urgent"}      # classes where it only plays a fixed line
 GUARD_CLASSES = {"urgent", "unclear"}
@@ -49,7 +49,7 @@ def system_prompt():
 
 
 # Prompt labels (distinct words a small model won't blur) -> eval classes.
-PROMPT_LABELS = {"answer": "in", "partial": "in_handoff", "out": "out", "urgent": "urgent", "unclear": "unclear"}
+PROMPT_LABELS = {"answer": "in", "partial": "in_handoff", "out": "out", "urgent": "urgent", "unclear": "unclear", "done": "done"}
 
 
 def parse_label(reply):

@@ -187,3 +187,15 @@ conversation design, the Alexa "one-breath test", Rasa and Vapi voice prompting 
   not "1-4"). No URLs, no markdown.
 - Plain, contracted, no filler ("Great question!"). Don't repeat the caller's question back.
 - Every in-scope answer ends with a short check, "Anything else about your transfer?"
+
+## D15. A false escalation is better than a false answer (decided, 12 Nov 2026)
+
+The rule that settles the remaining trade-offs. In `agent/policy.py`: unparseable model output
+becomes UNCLEAR and is never spoken; after a handoff offer, anything but an in-scope question
+connects the caller; the classifier may only escalate. A DONE label (caller says "no, that's
+all") ends the call with a goodbye instead of an "unclear" reprompt.
+
+- Faithfulness stays a known limitation for this version: the answer bank (README "What I'd do
+  next") is the fix, deferred to close the project.
+- Speech-to-text: Whisper large-v3-turbo (`deepdml/faster-whisper-large-v3-turbo-ct2`) on CUDA,
+  downloaded 12 Nov 2026.
