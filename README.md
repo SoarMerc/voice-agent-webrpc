@@ -5,7 +5,7 @@ A voice support agent that answers callers' questions about Wise's
 articles and hands everything else to a human. Runs fully local on open-source models: no call
 audio or transcript leaves the machine.
 
-> Status: spec and decisions written, no code yet. See `docs/SPEC.md` and `docs/DECISIONS.md`.
+> Status: scope policy and text-level eval done; voice pipeline not built yet.
 
 ## Built on my existing local voice stack
 
@@ -35,8 +35,35 @@ described; no retrieval because the whole FAQ fits in the prompt; an explicit, t
 
 ## Run
 
-To be written.
+Text-level scope eval (needs Ollama with `qwen3.5:4b`):
 
-## Results
+```
+python eval/run_scope.py --split train   # dev set: the only set the prompt is tuned on
+python eval/run_scope.py --split test    # held-out set: one run per prompt version
+```
 
-To be written: scope accuracy, false-answer and false-hand-off rates, latency (median and p90).
+The voice call is not built yet.
+
+## Results (text level, 12 Nov 2026)
+
+60 held-out caller lines (`eval/questions.jsonl`), five classes: answer, answer-then-hand-off,
+out of scope, urgent (actions, fraud, prompt injection), unclear. The prompt was tuned only on a
+separate 66-line dev set.
+
+| Scope check | Accuracy | False answers | False handoffs |
+|---|---|---|---|
+| LLM label, first prompt | 67% | 4 | 0 |
+| LLM label, tuned prompt | 82% | 1 | 4 |
+| Embedding classifier alone | 80% | 6 | 0 |
+| LLM + classifier escalating to urgent/unclear | **83%** | 1 | 4 |
+
+- False answer: spoke FAQ content when it should have handed off (the costly error). The one left
+  is a disputed label (q40).
+- Class label known 0.46 s median (0.48 s p90) after the caller's text arrives; LLM only.
+- Faithfulness (`eval/faithfulness.md`): 22 of 31 spoken answers fully supported by the FAQ,
+  3 unsure, **6 unsupported**, mostly invented timings and guesses about a caller's own transfer.
+  This is the open problem.
+- Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
+  prompt), `qwen3.5:9b` 79% with 9 replies missing the label, and didn't fit fully in GPU memory.
+- Ollama's OpenAI-compatible endpoint took 2.6 s to the first token; its native API with
+  `think: false` took 0.6 s for the same prompt and model.

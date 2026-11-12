@@ -10,6 +10,11 @@
 - Knowledge base: `kb/wise-where-is-my-money.md`, verbatim from the live pages (pasted by
   Shivansh, 11 Nov 2026).
 - System prompt with spoken-style rules and class labels: `agent/system_prompt.md` (D14).
+- Text-level eval done (12 Nov): `eval/run_scope.py`, results in README. Held-out accuracy 83%
+  with the LLM label plus classifier escalation. Faithfulness review in `eval/faithfulness.md`:
+  6 of 31 answers unsupported (invented timings, guesses about the caller's transfer).
+- Waiting on Shivansh: D4's proposed combination; the 3 "unsure" + 4 sample answers in
+  `eval/faithfulness.md`; whether q40's `out` label is wrong; how to fix faithfulness.
 - No pipeline code yet.
 
 ## Context
@@ -34,8 +39,7 @@
 
 ## Next, in order
 
-1. `eval/questions.jsonl` (held-out test set) and `eval/train.jsonl` (classifier training,
-   no shared sentences), then a text-only runner. Compare the D4 classifier options.
+1. Fix faithfulness (Shivansh picks the approach), re-run the held-out set once.
 2. Wire the Pipecat pipeline with a browser call; run the D10 end-of-turn test; measure latency.
 3. Faithfulness review (D13): Claude labels, Shivansh reviews the unsure ones and a sample.
 4. README with results; record the demo video.

@@ -59,6 +59,12 @@ answer is generated; out-of-scope turns get a fixed deflection line, never gener
     answer call costs only a few tokens. The stronger reasons for a classifier are injection
     resistance and a tunable threshold.
   - `sentence-transformers` and `scikit-learn` are already in the `langchain` env; SetFit is not.
+- Result (12 Nov 2026, held-out set; README "Results"): LLM label 82%, classifier 80%,
+  confidence cascade 83-85%. **Proposed: the LLM label, with the classifier only allowed to
+  escalate to urgent or unclear** (83%). The classifier is reliable on those two classes and
+  unreliable on "in scope" (it called fees and weather in scope), so it may only make the agent
+  more cautious, never make it answer. Simple to explain, and false answers stay bounded by the
+  LLM.
 
 ## D5. Pipecat as the framework (decided, 11 Nov 2026)
 
@@ -86,6 +92,10 @@ machine. Reuse it rather than choose fresh:
 - The README credits this prior work in a "Built on my existing local voice stack" section.
 - GPU memory: Whisper Turbo plus `qwen3.5:4b` are expected to fit in 8 GB together. Measure
   with both loaded during a call before the latency run.
+- Measured 12 Nov 2026 on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21%, `qwen3.5:9b` 79% (9
+  replies skipped the label; only 5.1 of 6.0 GB fit on the GPU even without Whisper). The 9B was
+  deleted. Call Ollama's native API with `think: false`, not the OpenAI-compatible endpoint
+  (2.6 s vs 0.6 s to first token).
 
 ## D7. Repo location (decided, 4 Nov 2026)
 
