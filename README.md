@@ -99,6 +99,11 @@ only on a separate 66-line dev set.
   The first LLM turn took 14 s while the model loaded; it's now preloaded at startup. Live speech
   to text took 0.5-3 s under memory pressure, against well under a second normally. Use
   headphones: without them the agent hears its own voice.
+- Third round (13 Nov): the main flow worked end to end (four answers, then "No, thanks" →
+  goodbye). Two more fixes: a goodbye now only counts after the agent has asked "anything
+  else?" (Whisper wrote "Thank you very much." on near-silence and ended a call), and a turn
+  with no new transcript is skipped instead of re-answering the previous question. Whisper now
+  runs in int8 to leave room on a shared 8 GB GPU.
 - Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
   prompt), `qwen3.5:9b` 79% with 9 replies missing the label, and didn't fit fully in GPU memory.
 - Ollama's OpenAI-compatible endpoint took 2.6 s to the first token; its native API with

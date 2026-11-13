@@ -33,7 +33,7 @@ def test_in_scope_question_after_handoff_offer_is_answered():
 def test_no_after_handoff_offer_connects():
     for label in ("UNCLEAR", "DONE"):
         q = CallPolicy()
-        q.decide("PARTIAL")
+        q.decide("PARTIAL")  # PARTIAL asks "anything else ... before I connect you?"
         a = q.decide(label)
         assert (a.say, a.end_call) == (CONNECT, True)
 
@@ -62,9 +62,16 @@ def test_answer_resets_unclear_strikes():
     assert p.decide("UNCLEAR").say == REPEAT
 
 
-def test_done_says_goodbye():
-    a = CallPolicy().decide("DONE")
+def test_done_says_goodbye_after_anything_else():
+    p = CallPolicy()
+    p.decide("ANSWER")
+    a = p.decide("DONE")
     assert (a.say, a.end_call) == (GOODBYE, True)
+
+
+def test_done_before_anything_else_is_a_mishearing():
+    a = CallPolicy().decide("DONE")   # e.g. Whisper's "Thank you very much." on silence
+    assert (a.say, a.end_call) == (REPEAT, False)
 
 
 def test_unknown_label_is_never_spoken():

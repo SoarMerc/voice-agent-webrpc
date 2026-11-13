@@ -1,3 +1,7 @@
 {"t": "2026-11-13 18:05:18", "latency_s": 2.459, "parts": {"endpointing wait": 0.2, "transcription": 1.344, "turn detection": 0.066, "speech synthesis": 0.846, "pipeline": 0.004}}
 {"t": "2026-11-13 18:08:13", "latency_s": 3.022, "parts": {"endpointing wait": 0.2, "transcription": 0.522, "turn detection": 1.272, "speech synthesis": 1.019, "output transport": 0.01}}
 {"t": "2026-11-13 18:08:57", "latency_s": 4.242, "parts": {"endpointing wait": 0.2, "transcription": 3.028, "turn detection": 0.122, "speech synthesis": 0.888, "pipeline": 0.004}}
+{"t": "2026-11-13 18:25:58", "latency_s": 2.764, "parts": {"endpointing wait": 0.2, "transcription": 0.923, "turn detection": 0.067, "LLM inference": 0.749, "speech synthesis": 0.816, "output transport": 0.009}}
+{"t": "2026-11-13 18:28:58", "latency_s": 6.565, "parts": {"endpointing wait": 0.2, "speech synthesis": 0.788, "output transport": 0.01, "pipeline": 5.567}}
+{"t": "2026-11-13 18:31:47", "latency_s": 6.576, "parts": {"endpointing wait": 0.2, "LLM inference": 4.318, "speech synthesis": 1.106, "output transport": 0.012, "pipeline": 0.94}}
+{"t": "2026-11-13 18:31:56", "latency_s": 6.507, "parts": {"endpointing wait": 0.2, "transcription": 4.399, "turn detection": 0.114, "LLM inference": 0.886, "speech synthesis": 0.902, "output transport": 0.007}}

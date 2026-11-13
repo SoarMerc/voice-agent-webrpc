@@ -61,7 +61,7 @@ async def bot(runner_args: RunnerArguments):
     stt = WhisperSTTService(
         settings=WhisperSTTService.Settings(model=Model.LARGE_V3_TURBO.value),
         device="cuda",
-        compute_type="float16",
+        compute_type="int8_float16",   # about half the GPU memory of float16; the GPU is shared
     )
     llm = WiseScopeLLM(model=LLM_MODEL, guard=GUARD)
     tts = KokoroTTSService(

@@ -43,11 +43,21 @@ class CallPolicy:
     def __init__(self):
         self.unclear_strikes = 0
         self.handoff_pending = False   # we've offered a colleague; one more in-scope question allowed
+        self.asked_anything_else = False
 
     def decide(self, label: str) -> Action:
         if label not in LABELS:
             label = "UNCLEAR"          # unparseable model output never gets spoken
+        if label == "DONE" and not self.asked_anything_else:
+            # A goodbye only counts as an answer to "anything else?". Before that it's usually a
+            # mis-hearing (Whisper writes "Thank you." on near-silence), so ask them to repeat.
+            label = "UNCLEAR"
+        action = self._decide(label)
+        if action.say in (ANSWER_CHECK, PARTIAL_HANDOFF, SOFT_HANDOFF, MENU):
+            self.asked_anything_else = True
+        return action
 
+    def _decide(self, label: str) -> Action:
         if label == "URGENT":
             return Action(False, URGENT_HANDOFF, end_call=True)
 

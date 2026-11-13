@@ -34,6 +34,7 @@ class WiseScopeLLM(OLLamaLLMService):
         self._guard = guard
         self._policy = CallPolicy()
         self._end_call = False
+        self._users_seen = 0
 
     async def process_frame(self, frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -50,9 +51,13 @@ class WiseScopeLLM(OLLamaLLMService):
         user_text = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         previous_agent = next((m["content"] for m in reversed(messages) if m["role"] == "assistant"), "")
         started = time.perf_counter()
-        if not user_text.strip():
-            logger.info("turn skipped: empty transcript (not counted as unclear)")
+        user_count = sum(m["role"] == "user" for m in messages)
+        if not user_text.strip() or user_count <= self._users_seen:
+            # The turn ended before a new transcript arrived; answering would re-run the
+            # previous question (live: "what are your fees" twice, the second time hung up).
+            logger.info("turn skipped: no new transcript (not counted as unclear)")
             return
+        self._users_seen = user_count
 
         label = self._guard.escalation(user_text, previous_agent)
         source = "classifier"
