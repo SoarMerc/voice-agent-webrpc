@@ -29,10 +29,14 @@ def split_label(text: str, final: bool = False):
 class ClassifierGuard:
     """Embedding classifier trained on eval/train.jsonl (D4, D12).
 
-    It may only escalate: it can turn a turn into URGENT or UNCLEAR, never into an answer.
+    It may only escalate, and only to URGENT when confident. On live calls it called a garbled
+    in-scope line ("Hi, my money has been right here", urgent at 0.31) urgent and ended the call,
+    and its "unclear" blocked "Bye." from reaching DONE. The LLM handles unclear turns on its own
+    (5/5 on the test set); the classifier's real job is catching injections the LLM misses
+    ("ignore your previous instructions…", urgent at 0.55).
     """
 
-    ESCALATIONS = {"urgent": "URGENT", "unclear": "UNCLEAR"}
+    MIN_URGENT = 0.45
 
     def __init__(self, model_name: str = "BAAI/bge-base-en-v1.5", device: str = "cpu"):
         from sentence_transformers import SentenceTransformer
@@ -45,5 +49,6 @@ class ClassifierGuard:
 
     def escalation(self, user_text: str, previous_agent_text: str = ""):
         text = f"{previous_agent_text} || {user_text}" if previous_agent_text else user_text
-        label = self.clf.predict(self.encoder.encode([text], normalize_embeddings=True))[0]
-        return self.ESCALATIONS.get(label)
+        proba = self.clf.predict_proba(self.encoder.encode([text], normalize_embeddings=True))[0]
+        urgent = proba[list(self.clf.classes_).index("urgent")]
+        return "URGENT" if urgent >= self.MIN_URGENT else None

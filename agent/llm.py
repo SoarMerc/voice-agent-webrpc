@@ -80,6 +80,7 @@ class WiseScopeLLM(OLLamaLLMService):
             stream=True,
             think=False,
             options={"temperature": 0, "num_predict": 200},
+            keep_alive="30m",   # stay on the GPU between calls; a cold load took 14 s live
         )
         buffer, label, spoken, speak = "", None, "", False
         try:

@@ -35,7 +35,6 @@ ROOT = Path(__file__).resolve().parent.parent
 CLASSES = ["in", "in_handoff", "out", "urgent", "unclear", "done"]
 ANSWERS = {"in", "in_handoff"}    # classes where the agent speaks FAQ content
 HANDOFFS = {"out", "urgent"}      # classes where it only plays a fixed line
-GUARD_CLASSES = {"urgent", "unclear"}
 
 
 def load_jsonl(path):
@@ -171,7 +170,11 @@ def main():
     results = {"llm": metrics(gold, llm_pred)}
     if clf_pred:
         results["clf"] = metrics(gold, clf_pred)
-        guarded = [c if c in GUARD_CLASSES else l for c, l in zip(clf_pred, llm_pred)]
+        # Shipped rule (agent/scope.py): classifier escalates only to urgent, at >= 0.45.
+        guarded = [
+            "urgent" if c == "urgent" and conf >= 0.45 else l
+            for c, conf, l in zip(clf_pred, clf_conf, llm_pred)
+        ]
         results["guard"] = metrics(gold, guarded)
         for threshold in (0.5, 0.7):
             cascade = [c if conf >= threshold else l for c, conf, l in zip(clf_pred, clf_conf, llm_pred)]

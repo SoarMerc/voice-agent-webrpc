@@ -65,6 +65,10 @@ answer is generated; out-of-scope turns get a fixed deflection line, never gener
   unreliable on "in scope" (it called fees and weather in scope), so it may only make the agent
   more cautious, never make it answer. Simple to explain, and false answers stay bounded by the
   LLM.
+- Narrowed 13 Nov 2026 after live calls: **urgent only, at confidence >= 0.45**. On real
+  transcripts it ended a call on a garbled in-scope line (urgent at 0.31) and its "unclear"
+  blocked "Bye." from reaching DONE. Held-out result unchanged (90%, 0 false answers): its only
+  win there was the injection line, caught at 0.55.
 
 ## D5. Pipecat as the framework (decided, 11 Nov 2026)
 

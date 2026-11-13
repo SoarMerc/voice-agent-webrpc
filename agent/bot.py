@@ -10,6 +10,7 @@ Every turn's end-of-speech -> first-audio latency is appended to eval/results/ca
 import json
 import time
 
+import ollama
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import TTSSpeakFrame
@@ -40,6 +41,15 @@ KOKORO_DIR = "F:/Voice/tts/kokoro"   # model files from the existing local voice
 LATENCY_LOG = ROOT / "eval" / "results" / "call-latency.jsonl"
 
 GUARD = ClassifierGuard()            # trained once at startup, shared across calls
+
+# Load the LLM onto the GPU and cache the system prompt now, not on the first caller's question.
+ollama.Client().chat(
+    model=LLM_MODEL,
+    messages=[{"role": "system", "content": system_prompt()}, {"role": "user", "content": "hello"}],
+    think=False,
+    options={"num_predict": 1},
+    keep_alive="30m",
+)
 
 
 async def bot(runner_args: RunnerArguments):

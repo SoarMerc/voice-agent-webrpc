@@ -1,0 +1,3 @@
+{"t": "2026-11-13 18:05:18", "latency_s": 2.459, "parts": {"endpointing wait": 0.2, "transcription": 1.344, "turn detection": 0.066, "speech synthesis": 0.846, "pipeline": 0.004}}
+{"t": "2026-11-13 18:08:13", "latency_s": 3.022, "parts": {"endpointing wait": 0.2, "transcription": 0.522, "turn detection": 1.272, "speech synthesis": 1.019, "output transport": 0.01}}
+{"t": "2026-11-13 18:08:57", "latency_s": 4.242, "parts": {"endpointing wait": 0.2, "transcription": 3.028, "turn detection": 0.122, "speech synthesis": 0.888, "pipeline": 0.004}}
