@@ -13,6 +13,7 @@ import time
 import ollama
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import TTSSpeakFrame
 from pipecat.observers.user_bot_latency_observer import UserBotLatencyObserver
 from pipecat.pipeline.pipeline import Pipeline
@@ -78,7 +79,13 @@ async def bot(runner_args: RunnerArguments):
         # The caller is muted until the greeting finishes, so the agent can't hear its own
         # greeting through the caller's speakers and answer it.
         user_params=LLMUserAggregatorParams(
-            vad_analyzer=SileroVADAnalyzer(),
+            # Barge-in depends on VAD noticing the caller start to speak; Whisper only
+            # transcribes after they stop. With the defaults (confidence 0.7, min_volume 0.6) a
+            # headset mic's quieter speech was missed and the agent kept talking until the
+            # transcript arrived (~6 s live). Lower floors; needs headphones to avoid self-echo.
+            vad_analyzer=SileroVADAnalyzer(
+                params=VADParams(confidence=0.6, min_volume=0.3, start_secs=0.2, stop_secs=0.2)
+            ),
             user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
         ),
     )

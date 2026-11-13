@@ -117,6 +117,12 @@ only on a separate 66-line dev set.
   saw held only the spoken text. Unlabelled output is never spoken, so in-scope questions were
   treated as unclear and one call ended early. Each earlier reply's label is now put back into
   the history; replaying the failing call confirmed the fix.
+- Barge-in: with Silero's default floors (confidence 0.7, min volume 0.6) a headset mic's
+  quieter speech was missed, and the agent kept talking until Whisper's transcript arrived. At
+  0.6 / 0.3 the agent stopped within ~10 ms of the caller starting to speak in the demo call.
+- Known cost of running locally: Whisper isn't streaming, so it transcribes only after the
+  caller stops, 0.4 s median and 1.5 s or more on long sentences or a loaded GPU. Streaming
+  speech to text would remove it but means a cloud provider hearing the audio (against D1).
 - Known gap: "Has my transfer to Priya arrived?" gets a general answer without the colleague
   offer. The needs-your-account case is the model's weakest class, here and in the eval.
 - Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
