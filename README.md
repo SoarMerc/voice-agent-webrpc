@@ -5,7 +5,7 @@ A voice support agent that answers callers' questions about Wise's
 articles and hands everything else to a human. Runs fully local on open-source models: no call
 audio or transcript leaves the machine.
 
-> Status: browser call and text-level eval done; live-call latency and demo video pending.
+> Status: done. Browser call, text-level eval and live-call latency measured.
 
 ## Built on my existing local voice stack
 
@@ -86,9 +86,18 @@ only on a separate 66-line dev set.
 1. **Pre-written answer bank.** About twenty spoken answers written and checked once against the
    six articles; the model picks and lightly adapts one. It removes the source of the unsupported
    answers above, instead of only measuring them.
-2. Live-call latency, median and p90 over real calls (logged to `eval/results/call-latency.jsonl`),
-   and the Smart Turn vs silence-timeout test (D10).
+2. Latency: a shorter first chunk for Kokoro or a GPU TTS (the largest part), and the Smart Turn
+   vs silence-timeout test (D10).
 3. Phone number: a Twilio Media Streams transport in Pipecat; the pipeline doesn't change.
+- **Live-call latency**, end of the caller's speech to the first audio
+  (`eval/results/call-latency.jsonl`): final round of test calls **2.8 s median, 4.0 s p90**
+  (8 turns); all 27 measured turns across every round, including runs under memory pressure,
+  3.3 s median, 5.7 s p90. Final-round parts (medians): Kokoro's first sentence 1.27 s, LLM to
+  first text 0.52 s, Whisper 0.40 s, turn detection 0.10 s, plus 0.2 s of VAD silence. Kokoro on
+  CPU is the first thing to cut.
+- Final round of live calls (13 Nov): calls 1, 3 and 5 of the test script all behaved as
+  specified: three answers then a goodbye; a soft handoff on fees, an in-scope follow-up still
+  answered, then "No thanks" connected to a colleague; "cancel my transfer" handed off at once.
 - First live calls (3 measured turns): 2.3-2.4 s from the end of the caller's speech to the first
   audio. Per turn: scope label + LLM first text 0.6-0.9 s, Kokoro's first sentence 0.8-1.4 s
   (CPU, the largest part). They also exposed three bugs, now fixed: a half-streamed label ("ANS")
@@ -104,6 +113,12 @@ only on a separate 66-line dev set.
   else?" (Whisper wrote "Thank you very much." on near-silence and ended a call), and a turn
   with no new transcript is skipped instead of re-answering the previous question. Whisper now
   runs in int8 to leave room on a shared 8 GB GPU.
+- Fourth round: after a few turns the model stopped writing its label, because the history it
+  saw held only the spoken text. Unlabelled output is never spoken, so in-scope questions were
+  treated as unclear and one call ended early. Each earlier reply's label is now put back into
+  the history; replaying the failing call confirmed the fix.
+- Known gap: "Has my transfer to Priya arrived?" gets a general answer without the colleague
+  offer. The needs-your-account case is the model's weakest class, here and in the eval.
 - Model comparison on the dev set: `qwen3.5:4b` 83%, `gemma3:4b` 21% (and leaked its system
   prompt), `qwen3.5:9b` 79% with 9 replies missing the label, and didn't fit fully in GPU memory.
 - Ollama's OpenAI-compatible endpoint took 2.6 s to the first token; its native API with

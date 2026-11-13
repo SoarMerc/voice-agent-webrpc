@@ -12,12 +12,14 @@
   the documented next step, deliberately not built (Shivansh: close the project).
 - Branch `feat/eval-set`, not pushed.
 
+- Live calls done (13 Nov): four rounds, each round's bugs fixed and noted in the README. Final
+  round passed; latency 2.8 s median, 4.0 s p90.
+
 ## Left to do (Shivansh)
 
-1. Make a few real calls: check barge-in, the handoff lines, and that the call ends after one.
-   Latency lands in `eval/results/call-latency.jsonl`; put median and p90 in the README.
-2. Record the 2-3 minute demo video; link it in the README.
-3. Push and send the link.
+1. Record the 2-3 minute demo video (calls 1, 3, 5 of the test script); link it in the README.
+2. `git push origin main` and send the link.
+3. Servers run hidden: stop with Task Manager (python running agent.bot, and ollama).
 
 ## Context
 
