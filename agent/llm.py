@@ -35,6 +35,16 @@ class WiseScopeLLM(OLLamaLLMService):
         self._policy = CallPolicy()
         self._end_call = False
         self._users_seen = 0
+        self._history_labels: list[tuple[str, str]] = []   # (start of what was said, label)
+
+    def _label_for(self, content: str):
+        """The label of an earlier reply, matched on how it starts (it may have been cut off)."""
+        text = content.strip()
+        for start, label in self._history_labels:
+            n = min(len(start), len(text), 25)
+            if n and text[:n] == start[:n]:
+                return label
+        return None
 
     async def process_frame(self, frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -48,6 +58,14 @@ class WiseScopeLLM(OLLamaLLMService):
             for m in context.get_messages()
             if isinstance(m, dict) and m.get("role") in ("system", "user", "assistant")
         ]
+        # The context stores what was spoken, without the label line. Put each earlier reply's
+        # label back: with unlabelled history the model starts answering without a label (live,
+        # after a soft handoff), and unlabelled output is never spoken.
+        for m in messages:
+            if m["role"] == "assistant":
+                label = self._label_for(m["content"])
+                if label:
+                    m["content"] = f"{label}\n{m['content']}"
         user_text = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         previous_agent = next((m["content"] for m in reversed(messages) if m["role"] == "assistant"), "")
         started = time.perf_counter()
@@ -68,9 +86,12 @@ class WiseScopeLLM(OLLamaLLMService):
 
         if label is not None:
             action = self._policy.decide(label)
+            said = spoken
             if action.say and not (action.speak_answer and spoken.rstrip().endswith("?")):
                 await self._push_llm_text((" " if spoken else "") + action.say)
+                said = f"{spoken} {action.say}"
             self._end_call = action.end_call
+            self._history_labels.append((said.strip()[:40], label))
         logger.info(
             f"turn label={label} source={source} label_s={time.perf_counter() - started:.2f} "
             f"end_call={self._end_call} user={user_text!r}"
@@ -100,6 +121,7 @@ class WiseScopeLLM(OLLamaLLMService):
                     if label is None and len(buffer) < 40:
                         continue
                     if label is None:
+                        logger.warning(f"no label, treated as UNCLEAR: {buffer[:60]!r}")
                         label, rest = "UNCLEAR", ""        # no label: never speak it
                     speak = label in ("ANSWER", "PARTIAL")
                     if not speak:
