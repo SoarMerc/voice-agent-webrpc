@@ -6,6 +6,9 @@ articles and hands everything else to a human. Runs fully local on open-source m
 audio or transcript leaves the machine.
 
 > Status: done. Browser call, text-level eval and live-call latency measured.
+>
+> **Demo:** [`demo/demo.mp4`](demo/demo.mp4), a two-minute browser call: answers, barge-in,
+> a needs-your-account question, and an out-of-scope handoff that ends the call.
 
 ## Built on my existing local voice stack
 
